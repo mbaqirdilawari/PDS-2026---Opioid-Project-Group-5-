@@ -1,4 +1,5 @@
 import pandas as pd
+import math
 
 shipments = pd.read_parquet("arcos_main.parquet")
 separate = pd.read_parquet("arcos_separate.parquet")
@@ -14,14 +15,6 @@ print(shipments["BUYER_BUS_ACT"].value_counts())
 
 print("\nBuyer types kept separately:")
 print(separate["BUYER_BUS_ACT"].value_counts())
-
-print("\nExtra geographic codes:")
-print(
-    shipments.loc[
-        shipments["BUYER_STATE"] == "VI",
-        ["BUYER_STATE", "BUYER_COUNTY"],
-    ].drop_duplicates()
-)
 
 # Keep US states and DC only.
 # Alaska is excluded as required by the project instructions.
@@ -80,6 +73,14 @@ valid_states = [
     "WY",
 ]
 
+print("\nExtra geographic codes:")
+print(
+    shipments.loc[
+        ~shipments["BUYER_STATE"].isin(valid_states),
+        ["BUYER_STATE", "BUYER_COUNTY"],
+    ].drop_duplicates()
+)
+
 shipments = shipments[shipments["BUYER_STATE"].isin(valid_states)].copy()
 
 # Sum across opioid drugs and buyer types.
@@ -89,6 +90,11 @@ county_year_shipments = shipments.groupby(
 ).agg(
     total_mme=("MME", "sum"),
     missing_mme_records=("MISSING_MME", "sum"),
+)
+
+assert math.isclose(
+    county_year_shipments["total_mme"].sum(),
+    shipments["MME"].sum(),
 )
 
 print("\nCounty-year shipment data:")
@@ -129,6 +135,11 @@ county_year_with_separate = shipments_with_separate.groupby(
 ).agg(
     total_mme=("MME", "sum"),
     missing_mme_records=("MISSING_MME", "sum"),
+)
+
+assert math.isclose(
+    county_year_with_separate["total_mme"].sum(),
+    shipments_with_separate["MME"].sum(),
 )
 
 print("\nSensitivity data shape:")
