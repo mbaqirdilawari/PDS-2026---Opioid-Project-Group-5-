@@ -1,3 +1,18 @@
+# Source: CDC WONDER, Underlying Cause of Death, 1999–2020.
+# https://wonder.cdc.gov/ucd-icd10.html
+# Separate download accessed November 15, 2026; not the annual files
+# supplied with the assignment.
+#
+# Query: County and Year, 2006–2015, all demographic groups,
+# combining overdose categories D1–D4. Zero and suppressed values included.
+# These are all-drug overdose deaths, not opioid-specific deaths.
+#
+# CDC reporting caveats:
+# Georgia, 2008–2009: unusually high ill-defined-cause (R99) counts.
+# New Jersey, 2009: unusually high R99 counts and underreported counts
+# for other causes, particularly unintentional poisonings.
+# Consider these issues when selecting controls and interpreting trends.
+
 import pandas as pd
 
 # Read combined overdose deaths: D1, D2, D3, and D4 together.
@@ -128,6 +143,31 @@ print("\nRows available for the mortality model:", len(mortality))
 print("Suppressed counts to estimate:", mortality["count_suppressed"].sum())
 print("Missing population:", mortality["population"].isna().sum())
 
+# Compare the share of suppressed rows with the share of population
+# living in those county/year observations.
+for state_name, state_code in [("Florida", "12"), ("Washington", "53")]:
+
+    state_data = mortality[
+        mortality["state_fips"] == state_code
+    ]
+
+    suppressed_data = state_data[
+        state_data["count_suppressed"]
+    ]
+
+    row_share = (
+        len(suppressed_data) / len(state_data) * 100
+    )
+
+    population_share = (
+        suppressed_data["population"].sum()
+        / state_data["population"].sum()
+        * 100
+    )
+
+    print(f"\n{state_name} suppression:")
+    print(f"County/year rows suppressed: {row_share:.1f}%")
+    print(f"Population share in suppressed rows: {population_share:.1f}%")
 
 # Save reported counts and missing-count flags without estimating deaths.
 mortality.to_parquet("mortality_county_year.parquet", index=False)
